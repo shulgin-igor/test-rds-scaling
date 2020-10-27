@@ -3,28 +3,46 @@ require('dotenv').config();
 
 class DB {
     constructor() {
-        this.connection = null;
+        this.readConnection = null;
+        this.writeConnection = null;
+        this.onMaster = false;
     }
 
-    async connect(host) {
-        this.connection = await mysql.createConnection({
-            host,
+    async connect(readHost, writeHost) {
+        this.readConnection = await mysql.createConnection({
+            host: readHost,
             user: 'admin',
             password: 'passpass',
             database: 'test',
         });
+
+        if (readHost === writeHost) {
+            this.writeConnection = this.readConnection;
+            this.onMaster = true;
+        } else {
+            this.writeConnection = await mysql.createConnection({
+                host: writeHost,
+                user: 'admin',
+                password: 'passpass',
+                database: 'test',
+            });
+        }
+
     }
 
     async create(origin) {
-        return this.connection.execute('INSERT INTO `users` (`first_name`, `last_name`, `origin`) VALUES (?, ?, ?)', ['Igor', 'Shulgin', origin]);
+        return this.writeConnection.execute('INSERT INTO `users` (`first_name`, `last_name`, `origin`) VALUES (?, ?, ?)', ['Igor', 'Shulgin', origin]);
     }
 
     async read(id) {
-        return this.connection.execute('SELECT * FROM `users` WHERE `id` = ?', [id]);
+        return this.readConnection.execute('SELECT * FROM `users` WHERE `id` = ?', [id]);
     }
 
     disconnect() {
-        this.connection.close();
+        this.readConnection.close();
+        if (!this.onMaster) {
+            this.writeConnection.close();
+        }
     }
 }
 
