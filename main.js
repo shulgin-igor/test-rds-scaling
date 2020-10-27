@@ -51,7 +51,7 @@ class DB {
 
     console.time(`DB Connection`);
 
-    await instance.connect(process.env.HOST);
+    await instance.connect(process.env.READ_HOST, process.env.WRITE_HOST);
 
     console.timeEnd(`DB Connection`);
 
